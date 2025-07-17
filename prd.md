@@ -155,6 +155,75 @@ scp get ICM-123 --full        # With PII restored
 - Avoid copying full comment threads
 - Focus on technical resolution patterns
 
+### PII Protection Architecture & Implementation Strategy
+
+**Architecture Options (Ranked by Implementation Priority)**
+
+**1. Local PII Extraction and Redaction Only** ⭐ *RECOMMENDED FIRST*
+- **Design**: All PII detection and redaction occurs locally, before any external model call (LLM, API, etc)
+- **Proof**: Log transformations and original-to-placeholder mappings with timestamps in append-only audit log
+- **Why it helps**: Proves that raw PII never left the machine
+- **Implementation**: Simple regex + local vault, easiest to build and audit
+
+**2. One-Way Hashing or Deterministic Pseudonymization**
+- **Technique**: Replace PII with SHA-256 w/ per-session salt or deterministic HMAC-based pseudonyms
+- **Output**: Tokenized values like `__USER_34F2__` or `__EMAIL_9A5D__`
+- **Benefit**: Non-reversible (SHA-256) or reversible only with local secret (HMAC)
+
+**3. Zero PII in Payload Assertion Layer**
+- **Built-in check**: Before any external system call, run PII-free assert() test using rule engine
+- **Fail-safe**: Abort operation and log incident if PII detected in outbound payload
+- **Auditability**: Complete log of assertion checks and failures
+
+**4. Audit Mode + Evidence Package**
+- **Generate**: JSON evidence object for each external interaction:
+```json
+{
+  "timestamp": "2025-07-17T13:00Z",
+  "outbound_payload": "sanitized_summary_v1.txt",
+  "pii_mapping_used": "pii_map_run42.json", 
+  "pii_assertion": true,
+  "model_used": "gpt-4o-local",
+  "location": "local_machine_only"
+}
+```
+
+**5. PII Mode Switch** ⭐ *REQUIRED FOR FLEXIBILITY*
+```bash
+# PII protection OFF - local development/debugging
+scp --no-pii-protection add "ICM-123: john.doe@company.com timeout"
+scp --no-pii-protection get ICM-123 --full
+
+# PII protection ON - default for sharing/LLM calls  
+scp add "ICM-123: [EMAIL_1] timeout"  # Auto-redacted
+scp get ICM-123 --context  # Always redacted for external use
+```
+
+## Recommended Implementation Approach
+
+**Start with Option 1: Local PII Extraction + Mode Switch**
+
+This provides the perfect balance of:
+- **Security**: All PII handled locally, never transmitted
+- **Flexibility**: `--no-pii-protection` for development/debugging
+- **Simplicity**: Regex patterns + local vault, easy to implement and audit
+- **Compliance**: Complete audit trail without complexity
+
+**Why This First**:
+1. **Immediate value**: Solves the access paradox without over-engineering
+2. **Audit-friendly**: Simple to explain and verify to compliance teams
+3. **Extensible**: Foundation for more sophisticated options later
+4. **Developer-friendly**: Can turn off protection for local debugging
+
+**Key Implementation Features**:
+- Default PII protection ON for all external operations
+- `--no-pii-protection` flag for local-only work
+- Encrypted local vault with rehydration capabilities
+- Append-only audit log showing all transformations
+- Pre-flight assertion checks before external calls
+
+This approach lets support engineers work productively while maintaining enterprise-grade security.
+
 **Local Vault Security & PII Rehydration**
 - AES-256 encryption for PII mappings in local `vault.json`
 - Never transmitted or shared externally
