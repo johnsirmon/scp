@@ -1,9 +1,34 @@
 #!/bin/bash
 # SCP Demo Script - Shows the power of minimal case triage
 
-echo "🚀 Support Context Protocol (SCP) Demo"
-echo "=========================================="
-echo ""
+echo "
+        _______________
+       /               \\
+      |   ___     ___   |    SCP DEMONSTRATION
+      |  |   |   |   |  |    ==================
+      |  |___|   |___|  |    
+      |       ___       |    SUPPORT CONTEXT PROTOCOL
+      |      \\___/      |    
+       \\_______________/     
+           |  |   |  |       MINIMAL • SECURE • INTELLIGENT
+           |__|___|__|       
+              | |            
+              |_|
+"
+
+echo "DATABASE STATISTICS:"
+node scp.js stats
+echo ""P Demo Script - Shows the power of minimal case triage
+
+echo "
+    ⚡ SCP DEMO ⚡
+   ╔═══════════╗
+   ║ � SUPPORT ║
+   ║  CONTEXT  ║
+   ║ PROTOCOL  ║
+   ╚═══════════╝
+     ☠️  TRIAGE  ☠️
+"
 
 echo "📊 Current database stats:"
 node scp.js stats

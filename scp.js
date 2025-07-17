@@ -9,6 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { Command } = require('commander');
+const figlet = require('figlet');
 
 class SCP {
   constructor() {
@@ -240,7 +241,15 @@ class SCP {
   }
 
   addCase(content, options = {}) {
-    console.log('📥 Processing case data...');
+    console.log(`
+        .-.
+       (o.o)     PROCESSING CASE...
+        \\-/      ==================
+         |       
+      .--'--.    [ SECURE TRIAGE PROTOCOL ]
+     /       \\    
+    /_________\\  
+    `);
     
     // Compress repetitive content first
     const compressed = this.compressLogs(content);
@@ -422,9 +431,26 @@ class SCP {
     const tagCounts = {};
     allTags.forEach(tag => tagCounts[tag] = (tagCounts[tag] || 0) + 1);
 
+    // Generate ASCII art header
+    const scpHeader = figlet.textSync('SCP', {
+      font: 'ANSI Shadow',
+      horizontalLayout: 'default',
+      verticalLayout: 'default'
+    });
+
+    const statsDisplay = `
+🔥 ${scpHeader}
+💀 DATABASE STATUS 💀
+=====================
+🗂️  CASES: ${totalCases}
+🔒 SECURED: ${totalPII}
+⚡ [ SCP VAULT ACTIVE ] ⚡
+    `;
+
     return {
       total_cases: totalCases,
       cases_with_pii: totalPII,
+      stats_display: statsDisplay,
       top_tags: Object.entries(tagCounts)
         .sort(([,a], [,b]) => b - a)
         .slice(0, 10)
@@ -439,9 +465,18 @@ class SCP {
 const program = new Command();
 const scp = new SCP();
 
+// Generate ASCII art header
+const welcomeHeader = figlet.textSync('SCP', {
+  font: 'ANSI Shadow',
+  horizontalLayout: 'default',
+  verticalLayout: 'default'
+});
+
+const styledHeader = `\n🔥 ${welcomeHeader}\n💀 SUPPORT CONTEXT PROTOCOL 💀\n`;
+
 program
   .name('scp')
-  .description('Support Context Protocol - Intelligent case triage')
+  .description(`${styledHeader}⚡ Intelligent case triage for Microsoft support engineers ⚡`)
   .version('1.0.0');
 
 program
@@ -541,14 +576,12 @@ program
   .description('Show database statistics')
   .action(() => {
     const stats = scp.stats();
-    console.log('📊 SCP Database Statistics\\n');
-    console.log(`Total cases: ${stats.total_cases}`);
-    console.log(`Cases with PII: ${stats.cases_with_pii}`);
-    console.log(`Database size: ${(stats.data_size / 1024).toFixed(2)} KB\\n`);
+    console.log(stats.stats_display);
+    console.log(`Database size: ${(stats.data_size / 1024).toFixed(2)} KB\n`);
     
-    console.log('🏷️  Top Tags:');
+    console.log('TOP TAGS:');
     stats.top_tags.forEach(({ tag, count }) => {
-      console.log(`   ${tag}: ${count}`);
+      console.log(`   [X] ${tag}: ${count}`);
     });
   });
 
