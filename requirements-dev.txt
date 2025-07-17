@@ -1,0 +1,9 @@
+# Development dependencies
+pytest>=7.0.0
+black>=22.0.0
+flake8>=5.0.0
+mypy>=0.991
+
+# Optional vector search dependencies (install separately if needed)
+# faiss-cpu>=1.7.4
+# sentence-transformers>=2.2.2
