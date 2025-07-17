@@ -245,6 +245,12 @@ SCP supports 3 pluggable authority flows for accessing full (non-redacted) data:
 - **File Paths**: `[A-Za-z]:\\[^\s<>:"|?*]+|/[^\s<>:"|?*]+`
 - **Internal Aliases**: `[a-zA-Z][a-zA-Z0-9._-]*@(microsoft|corp|redmond)\.(com|net)`
 
+**Best Practices for Data Parsing and Cleansing**
+- **Use Field-Based Extraction**: Parse structured fields like Incident ID, Severity, Status, Owner, and TTM directly from JSON or XML exports
+- **Normalize Discussion Threads**: Extract only action items, root cause summaries, and fix status. Avoid copying full comment threads unless scrubbed
+- **Tag Data Source**: Always label whether data came from ICM, ADO, or support case system to maintain traceability
+- **Context-Dependent Redaction**: Even internal aliases may be sensitive depending on audience and usage context
+
 ### Data Processing Best Practices
 
 **Field-Based Extraction**

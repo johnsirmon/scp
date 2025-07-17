@@ -12,15 +12,24 @@ const { Command } = require('commander');
 const figlet = require('figlet');
 
 class SCP {
-  constructor() {
+  constructor(options = {}) {
+    this.memoryMode = options.memoryMode || false;
     this.dataPath = path.join(process.env.HOME || process.env.USERPROFILE, '.scp');
     this.casesFile = path.join(this.dataPath, 'cases.json');
     this.vaultFile = path.join(this.dataPath, 'vault.json');
     
-    this.ensureDataDir();
-    this.vaultKey = this.getOrCreateKey();
-    this.cases = this.loadCases();
-    this.vault = this.loadVault();
+    if (!this.memoryMode) {
+      this.ensureDataDir();
+      this.vaultKey = this.getOrCreateKey();
+      this.cases = this.loadCases();
+      this.vault = this.loadVault();
+    } else {
+      // In-memory mode - generate session key and initialize empty stores
+      this.vaultKey = crypto.randomBytes(32).toString('hex');
+      this.cases = {};
+      this.vault = {};
+      console.log('🧠 Running in memory-only mode (no data will be saved to disk)');
+    }
   }
 
   ensureDataDir() {
@@ -48,7 +57,7 @@ class SCP {
       { pattern: /\/resourceGroups\/[\w-]+/gi, replacement: '[RG_#]' },
       { pattern: /\/providers\/Microsoft\.[\w\/]+/gi, replacement: '[RESOURCE_#]' },
       
-      // Common Microsoft patterns
+      // Common Microsoft patterns  
       { pattern: /[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}/gi, replacement: '[GUID_#]' },
       { pattern: /\b[\w-]+@microsoft\.com\b/gi, replacement: '[MS_EMAIL_#]' },
       { pattern: /\b[\w-]+@[\w-]+\.com\b/gi, replacement: '[EMAIL_#]' },
@@ -59,11 +68,69 @@ class SCP {
       
       // Phone numbers and other sensitive data
       { pattern: /\b\d{3}-\d{3}-\d{4}\b/g, replacement: '[PHONE_#]' },
-      { pattern: /\b[A-Z]{2,}\d{6,}\b/g, replacement: '[ID_#]' }
+      { pattern: /\b[A-Z]{2,}\d{6,}\b/g, replacement: '[ID_#]' },
+      
+      // Enhanced Windows-specific patterns
+      { pattern: /\\\\[\w-]+\\[\w\s]+/gi, replacement: '[UNC_PATH_#]' },
+      { pattern: /[A-Z]:\\[\w\\\s.-]+/gi, replacement: '[WIN_PATH_#]' },
+      { pattern: /HKEY_[A-Z_]+\\[\w\\.-]+/gi, replacement: '[REGISTRY_#]' },
+      { pattern: /\b[A-Z]{2}\d{4,}/g, replacement: '[WIN_ID_#]' }
     ];
   }
 
-  redactPII(text) {
+  // AI-Enhanced PII Detection (fallback to regex if AI unavailable)
+  async detectPIIWithAI(text) {
+    try {
+      // Simple heuristic-based AI-like detection patterns
+      const aiPatterns = [
+        // Detect personal names in context
+        { pattern: /\b[A-Z][a-z]+ [A-Z][a-z]+\b/g, replacement: '[PERSON_NAME_#]', context: /customer|user|contact/ },
+        
+        // Detect possible customer IDs in context
+        { pattern: /\b[A-Z0-9]{8,}\b/g, replacement: '[CUSTOMER_ID_#]', context: /customer|account|tenant/ },
+        
+        // Detect sensitive file paths
+        { pattern: /[a-zA-Z]:\\Users\\[^\\]+/gi, replacement: '[USER_PATH_#]' },
+        
+        // Detect possible API keys or tokens
+        { pattern: /\b[A-Za-z0-9]{20,}\b/g, replacement: '[API_TOKEN_#]', context: /key|token|secret|auth/ },
+        
+        // Detect database connection strings
+        { pattern: /server=[\w.-]+/gi, replacement: '[DB_SERVER_#]' },
+        { pattern: /database=\w+/gi, replacement: '[DB_NAME_#]' }
+      ];
+
+      let enhanced = text;
+      const mappings = {};
+      const counters = {};
+
+      aiPatterns.forEach(({ pattern, replacement, context }) => {
+        enhanced = enhanced.replace(pattern, (match, offset) => {
+          // If context is specified, only replace if context words are nearby
+          if (context) {
+            const surrounding = text.slice(Math.max(0, offset - 100), offset + 100).toLowerCase();
+            if (!context.test(surrounding)) {
+              return match; // Don't replace if context doesn't match
+            }
+          }
+
+          const baseReplacement = replacement.replace('#', '');
+          counters[baseReplacement] = (counters[baseReplacement] || 0) + 1;
+          const token = replacement.replace('#', counters[baseReplacement]);
+          mappings[token] = match;
+          return token;
+        });
+      });
+
+      return { enhanced, mappings };
+    } catch (error) {
+      console.warn('AI PII detection failed, using regex fallback:', error.message);
+      return { enhanced: text, mappings: {} };
+    }
+  }
+
+  async redactPII(text) {
+    // First pass: Regex-based PII detection
     let redacted = text;
     const mappings = {};
     const counters = {};
@@ -77,6 +144,15 @@ class SCP {
         return token;
       });
     });
+
+    // Second pass: AI-enhanced detection
+    try {
+      const { enhanced, mappings: aiMappings } = await this.detectPIIWithAI(redacted);
+      redacted = enhanced;
+      Object.assign(mappings, aiMappings);
+    } catch (error) {
+      console.warn('AI PII detection failed, continuing with regex-only:', error.message);
+    }
 
     return { redacted, mappings };
   }
@@ -240,7 +316,7 @@ class SCP {
     return compressed.join('\\n');
   }
 
-  addCase(content, options = {}) {
+  async addCase(content, options = {}) {
     console.log(`
         .-.
        (o.o)     PROCESSING CASE...
@@ -262,8 +338,8 @@ class SCP {
       icm.case_id = options.caseId || `CASE-${Date.now()}`;
     }
 
-    // Redact PII
-    const { redacted, mappings } = this.redactPII(compressed);
+    // Redact PII (async now due to AI detection)
+    const { redacted, mappings } = await this.redactPII(compressed);
     icm.content_redacted = redacted;
 
     // Store PII mappings in encrypted vault
@@ -403,7 +479,9 @@ class SCP {
   }
 
   saveCases() {
-    fs.writeFileSync(this.casesFile, JSON.stringify(this.cases, null, 2));
+    if (!this.memoryMode) {
+      fs.writeFileSync(this.casesFile, JSON.stringify(this.cases, null, 2));
+    }
   }
 
   loadVault() {
@@ -419,8 +497,10 @@ class SCP {
   }
 
   saveVault() {
-    const encrypted = this.encryptVault(this.vault);
-    fs.writeFileSync(this.vaultFile, encrypted, { mode: 0o600 });
+    if (!this.memoryMode) {
+      const encrypted = this.encryptVault(this.vault);
+      fs.writeFileSync(this.vaultFile, encrypted, { mode: 0o600 });
+    }
   }
 
   stats() {
@@ -461,9 +541,200 @@ SECURED: ${totalPII}
   }
 }
 
+// Clipboard Monitor Class (inspired by caseClipper patterns)
+class ClipboardMonitor {
+  constructor(scp, options = {}) {
+    this.scp = scp;
+    this.interval = options.interval || 1000;
+    this.minLength = options.minLength || 50;
+    this.lastClipboard = '';
+    this.isRunning = false;
+    this.processedHashes = new Set(); // Prevent duplicate processing
+  }
+
+  // Enhanced ICM/Case ID detection patterns (inspired by caseClipper)
+  detectCaseIds(content) {
+    const patterns = [
+      // ICM patterns
+      /ICM[:-]?\s*(\d{8,12})/gi,
+      /Incident[:-]?\s*(\d{8,12})/gi,
+      
+      // Support Request patterns
+      /(?:Support.*?Request|SR)[:-]?\s*(\d{10,})/gi,
+      /Case[:-]?\s*(\d{8,})/gi,
+      
+      // Microsoft specific patterns
+      /(?:Azure|Office|Teams).*?[:-]?\s*(\d{8,})/gi,
+      
+      // Generic case patterns
+      /\b(?:Case|Ticket|Issue)[:-]?\s*([A-Z0-9]{6,})/gi
+    ];
+
+    const ids = new Set();
+    patterns.forEach(pattern => {
+      let match;
+      while ((match = pattern.exec(content)) !== null) {
+        ids.add(match[0]); // Store full match for better context
+      }
+    });
+
+    return Array.from(ids);
+  }
+
+  // Smart content validation (inspired by caseClipper logic)
+  isValidCaseContent(content) {
+    if (content.length < this.minLength) return false;
+    
+    // Check for case indicators
+    const indicators = [
+      /\b(?:ICM|Incident|Support|Case|SR|Ticket)\b/i,
+      /\b(?:Azure|Microsoft|Office|Teams)\b/i,
+      /\b(?:Error|Exception|Failed|Timeout)\b/i,
+      /\b(?:Severity|Priority|Status)\b/i,
+      /\b(?:Customer|User|Client)\b/i
+    ];
+    
+    return indicators.some(pattern => pattern.test(content));
+  }
+
+  async getClipboard() {
+    return new Promise((resolve, reject) => {
+      const { spawn } = require('child_process');
+      let cmd, args;
+      
+      switch (process.platform) {
+        case 'darwin':
+          cmd = 'pbpaste';
+          args = [];
+          break;
+        case 'win32':
+          cmd = 'powershell.exe';
+          args = ['-Command', 'Get-Clipboard | Out-String'];
+          break;
+        case 'linux':
+          cmd = 'xclip';
+          args = ['-o'];
+          break;
+        default:
+          reject(new Error(`Unsupported platform: ${process.platform}`));
+          return;
+      }
+      
+      const proc = spawn(cmd, args);
+      let content = '';
+      
+      proc.stdout.on('data', (data) => {
+        content += data.toString();
+      });
+      
+      proc.on('close', (code) => {
+        if (code === 0) {
+          resolve(content.trim());
+        } else {
+          reject(new Error(`Clipboard command failed with code ${code}`));
+        }
+      });
+      
+      proc.on('error', (error) => {
+        reject(error);
+      });
+    });
+  }
+
+  generateContentHash(content) {
+    return crypto.createHash('md5').update(content).digest('hex');
+  }
+
+  async processClipboardContent(content) {
+    const contentHash = this.generateContentHash(content);
+    
+    // Skip if already processed
+    if (this.processedHashes.has(contentHash)) {
+      return;
+    }
+    
+    // Validate content
+    if (!this.isValidCaseContent(content)) {
+      return;
+    }
+    
+    // Detect case IDs
+    const caseIds = this.detectCaseIds(content);
+    
+    console.log(`\n📋 New clipboard content detected:`);
+    console.log(`   Length: ${content.length} chars`);
+    console.log(`   Detected IDs: ${caseIds.length > 0 ? caseIds.join(', ') : 'None'}`);
+    
+    try {
+      // Auto-extract case ID if found
+      const suggestedId = caseIds.length > 0 ? caseIds[0] : undefined;
+      
+      // Add case to SCP
+      const addedCaseId = await this.scp.addCase(content, { caseId: suggestedId });
+      
+      console.log(`✅ Case added: ${addedCaseId}`);
+      
+      // Mark as processed
+      this.processedHashes.add(contentHash);
+      
+      // Limit processed hashes to prevent memory growth
+      if (this.processedHashes.size > 1000) {
+        const array = Array.from(this.processedHashes);
+        this.processedHashes = new Set(array.slice(-500));
+      }
+      
+    } catch (error) {
+      console.error(`❌ Failed to process clipboard content: ${error.message}`);
+    }
+  }
+
+  async start() {
+    this.isRunning = true;
+    
+    // Setup graceful shutdown
+    process.on('SIGINT', () => {
+      console.log('\n🛑 Stopping clipboard monitor...');
+      this.stop();
+    });
+    
+    // Initialize with current clipboard
+    try {
+      this.lastClipboard = await this.getClipboard();
+    } catch (error) {
+      console.warn('Could not read initial clipboard:', error.message);
+    }
+    
+    // Start monitoring loop
+    while (this.isRunning) {
+      try {
+        const currentClipboard = await this.getClipboard();
+        
+        // Check if clipboard changed
+        if (currentClipboard !== this.lastClipboard && currentClipboard.length > 0) {
+          await this.processClipboardContent(currentClipboard);
+          this.lastClipboard = currentClipboard;
+        }
+        
+        // Wait before next check
+        await new Promise(resolve => setTimeout(resolve, this.interval));
+        
+      } catch (error) {
+        console.error('Clipboard monitoring error:', error.message);
+        await new Promise(resolve => setTimeout(resolve, this.interval * 2)); // Back off on error
+      }
+    }
+  }
+
+  stop() {
+    this.isRunning = false;
+    console.log('📋 Clipboard monitor stopped');
+    process.exit(0);
+  }
+}
+
 // CLI Interface
 const program = new Command();
-const scp = new SCP();
+let scp; // Will be initialized after parsing options
 
 // Generate ASCII art header
 const welcomeHeader = figlet.textSync('SCP', {
@@ -477,7 +748,8 @@ const styledHeader = `\n${welcomeHeader}\nSUPPORT CONTEXT PROTOCOL\n`;
 program
   .name('scp')
   .description(`${styledHeader}Intelligent case triage for Microsoft support engineers`)
-  .version('1.0.0');
+  .version('1.0.0')
+  .option('--memory', 'Run in memory-only mode (no disk persistence)');
 
 program
   .command('add')
@@ -486,26 +758,61 @@ program
   .option('--file <path>', 'Read from file')
   .option('--paste', 'Read from clipboard (requires pbpaste/xclip)')
   .action(async (options) => {
+    // Initialize SCP with global options
+    const globalOptions = program.opts();
+    if (!scp) scp = new SCP({ memoryMode: globalOptions.memory });
+    
     let content = '';
     
     if (options.file) {
       content = fs.readFileSync(options.file, 'utf8');
     } else if (options.paste) {
-      // Try to read from clipboard
+      // Try to read from clipboard (cross-platform)
       try {
         const { spawn } = require('child_process');
-        const cmd = process.platform === 'darwin' ? 'pbpaste' : 'xclip -o';
-        const proc = spawn('sh', ['-c', cmd]);
+        let cmd, args;
+        
+        switch (process.platform) {
+          case 'darwin':
+            cmd = 'pbpaste';
+            args = [];
+            break;
+          case 'win32':
+            cmd = 'powershell.exe';
+            args = ['-Command', 'Get-Clipboard | Out-String'];
+            break;
+          case 'linux':
+            cmd = 'xclip';
+            args = ['-o'];
+            break;
+          default:
+            throw new Error(`Unsupported platform: ${process.platform}`);
+        }
+        
+        const proc = spawn(cmd, args);
         
         proc.stdout.on('data', (data) => {
           content += data.toString();
         });
         
-        await new Promise((resolve) => {
-          proc.on('close', resolve);
+        proc.stderr.on('data', (data) => {
+          console.error(`Clipboard error: ${data}`);
         });
+        
+        await new Promise((resolve, reject) => {
+          proc.on('close', (code) => {
+            if (code === 0) {
+              resolve();
+            } else {
+              reject(new Error(`Clipboard command failed with code ${code}`));
+            }
+          });
+        });
+        
+        console.log(`📋 Clipboard content retrieved (${process.platform})`);
       } catch (e) {
-        console.error('Clipboard not available. Please use --file or pipe content.');
+        console.error(`Clipboard not available on ${process.platform}. Error: ${e.message}`);
+        console.error('Please use --file or pipe content.');
         process.exit(1);
       }
     } else {
@@ -522,7 +829,7 @@ program
       process.exit(1);
     }
 
-    const caseId = scp.addCase(content, { caseId: options.caseId });
+    const caseId = await scp.addCase(content, { caseId: options.caseId });
     console.log(`Case ID: ${caseId}`);
   });
 
@@ -532,6 +839,10 @@ program
   .option('-l, --limit <num>', 'Limit results', 5)
   .option('-c, --context', 'Format for MCP/LLM context')
   .action((query, options) => {
+    // Initialize SCP with global options
+    const globalOptions = program.opts();
+    if (!scp) scp = new SCP({ memoryMode: globalOptions.memory });
+    
     const results = scp.search(query, { limit: parseInt(options.limit) });
     
     if (results.length === 0) {
@@ -561,6 +872,10 @@ program
   .option('-c, --context', 'Format for MCP/LLM context')
   .option('-f, --full', 'Include rehydrated PII (local only)')
   .action((caseId, options) => {
+    // Initialize SCP with global options
+    const globalOptions = program.opts();
+    if (!scp) scp = new SCP({ memoryMode: globalOptions.memory });
+    
     const icm = scp.getCase(caseId, options);
     
     if (!icm) {
@@ -575,6 +890,10 @@ program
   .command('stats')
   .description('Show database statistics')
   .action(() => {
+    // Initialize SCP with global options
+    const globalOptions = program.opts();
+    if (!scp) scp = new SCP({ memoryMode: globalOptions.memory });
+    
     const stats = scp.stats();
     console.log(stats.stats_display);
     console.log(`Database size: ${(stats.data_size / 1024).toFixed(2)} KB\n`);
@@ -583,6 +902,28 @@ program
     stats.top_tags.forEach(({ tag, count }) => {
       console.log(`   [X] ${tag}: ${count}`);
     });
+  });
+
+program
+  .command('monitor')
+  .description('Monitor clipboard for case data and auto-add')
+  .option('--interval <ms>', 'Polling interval in milliseconds', '1000')
+  .option('--min-length <chars>', 'Minimum content length to process', '50')
+  .action(async (options) => {
+    // Initialize SCP with global options
+    const globalOptions = program.opts();
+    if (!scp) scp = new SCP({ memoryMode: globalOptions.memory });
+    
+    const monitor = new ClipboardMonitor(scp, {
+      interval: parseInt(options.interval),
+      minLength: parseInt(options.minLength)
+    });
+    
+    console.log('🔍 Starting clipboard monitor...');
+    console.log('📋 Copy case data to clipboard - it will be automatically processed');
+    console.log('⏸️  Press Ctrl+C to stop monitoring\n');
+    
+    await monitor.start();
   });
 
 // Handle stdin for piped input
