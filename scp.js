@@ -439,12 +439,12 @@ class SCP {
     });
 
     const statsDisplay = `
-🔥 ${scpHeader}
-💀 DATABASE STATUS 💀
-=====================
-🗂️  CASES: ${totalCases}
-🔒 SECURED: ${totalPII}
-⚡ [ SCP VAULT ACTIVE ] ⚡
+${scpHeader}
+DATABASE STATUS
+===============
+CASES: ${totalCases}
+SECURED: ${totalPII}
+[ SCP VAULT ACTIVE ]
     `;
 
     return {
@@ -472,11 +472,11 @@ const welcomeHeader = figlet.textSync('SCP', {
   verticalLayout: 'default'
 });
 
-const styledHeader = `\n🔥 ${welcomeHeader}\n💀 SUPPORT CONTEXT PROTOCOL 💀\n`;
+const styledHeader = `\n${welcomeHeader}\nSUPPORT CONTEXT PROTOCOL\n`;
 
 program
   .name('scp')
-  .description(`${styledHeader}⚡ Intelligent case triage for Microsoft support engineers ⚡`)
+  .description(`${styledHeader}Intelligent case triage for Microsoft support engineers`)
   .version('1.0.0');
 
 program
