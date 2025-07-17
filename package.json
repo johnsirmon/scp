@@ -1,0 +1,28 @@
+{
+  "name": "scp",
+  "version": "1.0.0",
+  "description": "Support Context Protocol - Intelligent case triage for support engineers",
+  "main": "scp.js",
+  "bin": {
+    "scp": "./scp.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "start": "node scp.js",
+    "mcp": "node mcp-server.js"
+  },
+  "keywords": ["support", "triage", "mcp", "ai", "context"],
+  "author": "Microsoft Support Engineering",
+  "license": "MIT",
+  "dependencies": {
+    "commander": "^11.0.0",
+    "crypto-js": "^4.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
