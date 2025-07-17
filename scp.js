@@ -42,7 +42,7 @@ class SCP {
     this.ensureDataDir(); // Ensure directory exists first
     const keyFile = path.join(this.dataPath, '.key');
     if (fs.existsSync(keyFile)) {
-      return fs.readFileSync(keyFile, 'utf8');
+      return fs.readFileSync(keyFile, 'utf8').trim();
     }
     const key = crypto.randomBytes(32).toString('hex');
     fs.writeFileSync(keyFile, key, { mode: 0o600 });
@@ -158,16 +158,20 @@ class SCP {
   }
 
   encryptVault(data) {
-    const cipher = crypto.createCipher('aes-256-cbc', this.vaultKey);
+    const iv = crypto.randomBytes(16);
+    const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(this.vaultKey, 'hex'), iv);
     let encrypted = cipher.update(JSON.stringify(data), 'utf8', 'hex');
     encrypted += cipher.final('hex');
-    return encrypted;
+    return iv.toString('hex') + ':' + encrypted;
   }
 
   decryptVault(encrypted) {
     try {
-      const decipher = crypto.createDecipher('aes-256-cbc', this.vaultKey);
-      let decrypted = decipher.update(encrypted, 'hex', 'utf8');
+      const parts = encrypted.split(':');
+      const iv = Buffer.from(parts[0], 'hex');
+      const encryptedData = parts[1];
+      const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(this.vaultKey, 'hex'), iv);
+      let decrypted = decipher.update(encryptedData, 'hex', 'utf8');
       decrypted += decipher.final('utf8');
       return JSON.parse(decrypted);
     } catch (e) {
@@ -926,9 +930,5 @@ program
     await monitor.start();
   });
 
-// Handle stdin for piped input
-if (!process.stdin.isTTY) {
-  program.parse(['node', 'scp', 'add']);
-} else {
-  program.parse();
-}
+// Parse command line arguments
+program.parse();
