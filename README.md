@@ -51,6 +51,42 @@ node scp.js monitor
 node scp.js --memory add --paste
 ```
 
+## Windows QuickStart
+
+**Prerequisites:** Node.js 18+ installed on Windows 10/11
+
+```powershell
+# Clone and setup
+git clone <repository-url>
+cd scp
+npm install
+
+# Test clipboard functionality (copy some text first)
+node scp.js add --paste
+
+# Start real-time clipboard monitoring for ICM/case data
+node scp.js monitor
+
+# Add a case from file
+node scp.js add --file "C:\path\to\case-data.txt"
+
+# Search cases
+node scp.js search "timeout"
+
+# Get AI-ready context
+node scp.js get ICM-123456 --context
+
+# Memory-only mode (no disk writes - perfect for secure environments)
+node scp.js --memory monitor
+```
+
+**Windows-Specific Features:**
+- Native PowerShell clipboard integration (`Get-Clipboard`)
+- UNC path detection and redaction (`\\server\share\file`)
+- Windows registry key patterns (`HKEY_LOCAL_MACHINE\...`)
+- Windows file paths (`C:\Users\...`) 
+- Compatible with Windows Security policies
+
 ## Core Features
 
 - **Cross-platform clipboard support** (Windows PowerShell, macOS pbpaste, Linux xclip)
@@ -60,6 +96,32 @@ node scp.js --memory add --paste
 - **AES-256 encrypted PII vault** with rehydration capabilities
 - **Model Context Protocol server** for VSCode integration
 - **Windows-specific patterns** (UNC paths, registry keys, Windows IDs)
+
+## Windows Testing & Troubleshooting
+
+**PowerShell Execution Policy Issues:**
+```powershell
+# If clipboard access fails, check execution policy
+Get-ExecutionPolicy
+# If restricted, temporarily allow for current session:
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+```
+
+**Testing Clipboard Functionality:**
+```powershell
+# Manual test of PowerShell clipboard command
+Get-Clipboard | Out-String
+
+# Test with sample ICM data
+"ICM-123456: Sample case data for testing" | Set-Clipboard
+node scp.js add --paste
+```
+
+**Common Windows Issues:**
+- **Clipboard access denied**: Run PowerShell as Administrator or adjust execution policy
+- **File path issues**: Use double quotes around paths with spaces
+- **Node.js not found**: Ensure Node.js is in PATH or use full path to node.exe
+- **Permission denied on .scp folder**: Check Windows folder permissions in %USERPROFILE%\.scp
 
 ## Files
 
