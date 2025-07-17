@@ -211,6 +211,18 @@ SCP supports 3 pluggable authority flows for accessing full (non-redacted) data:
 - State (e.g., New, Active, Resolved)
 - Custom Fields (e.g., TTM, TSH, TSM metrics)
 
+**Relevant Fields for SCP Extraction**
+
+| Field Type | ICM Fields | ADO Fields | SCP Usage |
+|------------|------------|------------|----------|
+| **Identifiers** | Incident ID, SR ID | Work Item ID | Case linking and deduplication |
+| **Metadata** | Service Name, Severity, Status, Region | Tags, State, Priority | Context classification and search |
+| **Ownership** | Owner/Assignee, PG contact | Assigned To, Area Path | Responsibility tracking (redacted) |
+| **Timestamps** | Created, Last Updated, TTM | Created Date, Resolved Date | Timeline analysis and metrics |
+| **Content** | Discussion threads, Root Cause | Comments, Description | Solution pattern extraction |
+| **Linkages** | ADO Work Items, Repair Items | Linked ICMs, Parent/Child | Relationship mapping |
+| **Environment** | Subscription ID, Workspace ID | Custom fields | Customer context (redacted) |
+
 ### PII Categories and Redaction
 
 **Critical PII to Cleanse**
@@ -223,11 +235,15 @@ SCP supports 3 pluggable authority flows for accessing full (non-redacted) data:
 | Log Content | Customer data in logs, credentials | `[LOG_DATA_1]` |
 | Freeform Text | Unstructured text with customer context | Context-aware redaction |
 
-**Regex Patterns for Detection**
-- Email addresses: `[\w\.-]+@[\w\.-]+`
-- IP addresses: `\b(?:\d{1,3}\.){3}\d{1,3}\b`
-- GUIDs/Subscription IDs: `\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b`
-- Azure Resource IDs: `/subscriptions/[^/]+/resourceGroups/[^/]+/providers/[^/]+`
+**Enhanced Regex Patterns for Detection**
+- **Email addresses**: `[\w\.-]+@[\w\.-]+`
+- **IP addresses**: `\b(?:\d{1,3}\.){3}\d{1,3}\b`
+- **GUIDs/Subscription IDs**: `\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b`
+- **Azure Resource IDs**: `/subscriptions/[^/]+/resourceGroups/[^/]+/providers/[^/]+`
+- **ICM/SR IDs**: `ICM-\d+|Support-\d+|Incident-\d+`
+- **ADO Work Items**: `(?:Work Item|WI|#)\s*(\d{6,})`
+- **File Paths**: `[A-Za-z]:\\[^\s<>:"|?*]+|/[^\s<>:"|?*]+`
+- **Internal Aliases**: `[a-zA-Z][a-zA-Z0-9._-]*@(microsoft|corp|redmond)\.(com|net)`
 
 ### Data Processing Best Practices
 
@@ -240,6 +256,22 @@ SCP supports 3 pluggable authority flows for accessing full (non-redacted) data:
 - Extract action items and root cause summaries
 - Avoid copying full comment threads
 - Focus on technical resolution patterns
+- **Tag data source**: Always label whether data came from ICM, ADO, or support case system
+- **Maintain traceability**: Link extracted solutions back to original incident/work item
+
+**Advanced Parsing Strategies**
+
+**ICM-Specific Parsing**
+- **RATIO Integration**: Automatically detect ADO work items linked via RATIO system
+- **Repair Item Tracking**: Extract bug IDs and fix status for solution validation
+- **Escalation Context**: Parse severity changes and ownership transfers
+- **Customer Environment**: Safely extract region, service, and anonymized resource patterns
+
+**ADO Work Item Processing**
+- **Tag Analysis**: Use tags (Supportability, Bug, Feature) for automatic categorization
+- **Iteration Tracking**: Extract sprint/iteration data for timeline analysis
+- **Parent/Child Relationships**: Map feature→bug→task hierarchies
+- **Acceptance Criteria**: Parse structured requirements and validation steps
 
 ### Policy Adapter Layer (Critical for Cross-Org Adoption)
 
