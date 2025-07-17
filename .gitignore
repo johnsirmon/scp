@@ -5,6 +5,12 @@ test-icm*.txt           # Test ICM data files
 **/icm-*.txt            # Any ICM test data
 node_modules/           # npm dependencies
 
+# PII and Sensitive Documentation
+PIIGuidance.md          # Contains real Microsoft PII patterns - NEVER COMMIT
+**/PII*.md              # Any PII-related documentation
+**/pii*.md              # Any PII-related documentation (lowercase)
+*.pii                   # Any PII data files
+
 # SCP Data Directory
 # This directory contains persistent storage for the SCP system
 scp_data/

@@ -78,18 +78,108 @@ scp get ICM-123 --full        # With PII restored
 - Right-click → "Find similar cases" 
 - Seamlessly provide context to GitHub Copilot/Claude
 
-## PII Handling (Simplified)
+## PII Handling & Data Security
 
-**Auto-Redaction Patterns**
-- Email addresses → `[EMAIL_1]`, `[EMAIL_2]`
-- IP addresses → `[IP_1]`, `[IP_2]`  
-- Phone numbers → `[PHONE_1]`
-- Custom patterns via config
+### Data Sources and Structures
 
-**Local Vault**
-- Encrypted JSON file with token mappings
-- Never leaves local machine
-- Restore context after AI processing
+**ICM (Incident and Case Management)**
+- Incident ID (e.g., 633627204)
+- Service Name (e.g., Azure Monitor, AMA) 
+- Severity (e.g., Sev2, Sev3)
+- Status (e.g., Active, Closed)
+- Owner/Assignee (often includes alias or full name)
+- Discussion Threads (comments, updates, timestamps)
+- Linked Support Request (SR) or Case ID
+- Linked ADO Work Items (via RATIO or manual linkage)
+- Repair Items (e.g., bug IDs, fix status)
+- Customer Environment Metadata (e.g., subscription ID, workspace ID, region)
+
+**Azure DevOps (ADO) Work Items**
+- Work Item ID (e.g., 32672506)
+- Title and Description
+- Tags (e.g., Supportability, Bug, Feature)
+- Discussion Comments
+- Linked Incidents or SRs
+- Assigned To (user alias or name)
+- State (e.g., New, Active, Resolved)
+- Custom Fields (e.g., TTM, TSH, TSM metrics)
+
+### PII Categories and Redaction
+
+**Critical PII to Cleanse**
+| PII Category | Examples | Redaction Pattern |
+|--------------|----------|------------------|
+| Customer Identifiers | Subscription ID, Workspace ID, Tenant ID | `[SUB_ID_1]`, `[WORKSPACE_1]`, `[TENANT_1]` |
+| Network Data | IP addresses, domain names | `[IP_1]`, `[DOMAIN_1]` |
+| User Information | Email addresses, usernames, aliases | `[EMAIL_1]`, `[USER_1]` |
+| System Paths | File paths, directory structures | `[PATH_1]`, `[PATH_2]` |
+| Log Content | Customer data in logs, credentials | `[LOG_DATA_1]` |
+| Freeform Text | Unstructured text with customer context | Context-aware redaction |
+
+**Regex Patterns for Detection**
+- Email addresses: `[\w\.-]+@[\w\.-]+`
+- IP addresses: `\b(?:\d{1,3}\.){3}\d{1,3}\b`
+- GUIDs/Subscription IDs: `\b[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}\b`
+- Azure Resource IDs: `/subscriptions/[^/]+/resourceGroups/[^/]+/providers/[^/]+`
+
+### Data Processing Best Practices
+
+**Field-Based Extraction**
+- Parse structured fields directly from JSON/XML exports
+- Prioritize metadata over freeform content
+- Maintain traceability with data source tags
+
+**Discussion Thread Normalization**
+- Extract action items and root cause summaries
+- Avoid copying full comment threads
+- Focus on technical resolution patterns
+
+**Local Vault Security & PII Rehydration**
+- AES-256 encryption for PII mappings in local `vault.json`
+- Never transmitted or shared externally
+- Lightweight JSON structure for easy team sharing when needed
+
+**PII Rehydration Capabilities**
+```bash
+# Standard context export (always redacted)
+scp get ICM-123 --context > context.json
+
+# Local rehydration for authorized debugging (local only)
+scp get ICM-123 --full --local-only
+# Expands [SUB_ID_1] back to actual subscription ID
+
+# Team vault sharing for debugging sessions
+scp export-vault --team-file team_pii_map.json  # Encrypted team file
+scp import-vault --from-file team_pii_map.json  # Import team mappings
+```
+
+**Vault Structure (Lightweight)**
+```json
+{
+  "tokens": {
+    "[SUB_ID_1]": "12345678-1234-1234-1234-123456789abc",
+    "[WORKSPACE_1]": "workspace-name-prod", 
+    "[EMAIL_1]": "customer@company.com",
+    "[IP_1]": "192.168.1.100"
+  },
+  "metadata": {
+    "created": "2025-07-17T12:00:00Z",
+    "case_count": 42
+  }
+}
+```
+
+### Compliance Considerations
+
+**Internal Alias Handling**
+- Even internal Microsoft aliases may be sensitive
+- Context-dependent redaction based on audience
+- Option to preserve internal identifiers for authorized use
+
+**Data Retention**
+- Local-only storage approach
+- User-controlled data lifecycle
+- Export capabilities for team knowledge sharing (with PII stripped)
 
 ## Data Structure (Learned from Real ICMs)
 
