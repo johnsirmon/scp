@@ -1,3 +1,10 @@
+# SCP Data and Sensitive Files
+.scp/                    # User data directory with cases and vault
+*.icm                    # ICM files
+test-icm*.txt           # Test ICM data files
+**/icm-*.txt            # Any ICM test data
+node_modules/           # npm dependencies
+
 # SCP Data Directory
 # This directory contains persistent storage for the SCP system
 scp_data/
