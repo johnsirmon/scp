@@ -9,7 +9,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { Command } = require('commander');
-const figlet = require('figlet');
+// Removed figlet dependency
 
 class SCP {
   constructor(options = {}) {
@@ -515,17 +515,9 @@ class SCP {
     const tagCounts = {};
     allTags.forEach(tag => tagCounts[tag] = (tagCounts[tag] || 0) + 1);
 
-    // Generate ASCII art header
-    const scpHeader = figlet.textSync('SCP', {
-      font: 'ANSI Shadow',
-      horizontalLayout: 'default',
-      verticalLayout: 'default'
-    });
-
     const statsDisplay = `
-${scpHeader}
-DATABASE STATUS
-===============
+SCP DATABASE STATUS
+===================
 CASES: ${totalCases}
 SECURED: ${totalPII}
 [ SCP VAULT ACTIVE ]
@@ -740,14 +732,7 @@ class ClipboardMonitor {
 const program = new Command();
 let scp; // Will be initialized after parsing options
 
-// Generate ASCII art header
-const welcomeHeader = figlet.textSync('SCP', {
-  font: 'ANSI Shadow',
-  horizontalLayout: 'default',
-  verticalLayout: 'default'
-});
-
-const styledHeader = `\n${welcomeHeader}\nSUPPORT CONTEXT PROTOCOL\n`;
+const styledHeader = `\nSCP - SUPPORT CONTEXT PROTOCOL\n`;
 
 program
   .name('scp')
