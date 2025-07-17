@@ -28,7 +28,7 @@ class SCP {
       this.vaultKey = crypto.randomBytes(32).toString('hex');
       this.cases = {};
       this.vault = {};
-      console.log('🧠 Running in memory-only mode (no data will be saved to disk)');
+      console.log('Running in memory-only mode (no data will be saved to disk)');
     }
   }
 
@@ -352,10 +352,10 @@ class SCP {
     this.cases[icm.case_id] = icm;
     this.saveCases();
 
-    console.log(`✅ Case ${icm.case_id} added successfully`);
-    console.log(`📊 Found ${icm.symptoms.length} symptoms, ${icm.error_patterns.length} error patterns`);
-    console.log(`🏷️  Tags: ${icm.metadata.tags.join(', ')}`);
-    console.log(`🔒 PII tokens: ${Object.keys(mappings).length}`);
+    console.log(`Case ${icm.case_id} added successfully`);
+    console.log(`Found ${icm.symptoms.length} symptoms, ${icm.error_patterns.length} error patterns`);
+    console.log(`Tags: ${icm.metadata.tags.join(', ')}`);
+    console.log(`PII tokens: ${Object.keys(mappings).length}`);
     
     return icm.case_id;
   }
@@ -661,7 +661,7 @@ class ClipboardMonitor {
     // Detect case IDs
     const caseIds = this.detectCaseIds(content);
     
-    console.log(`\n📋 New clipboard content detected:`);
+    console.log(`\nNew clipboard content detected:`);
     console.log(`   Length: ${content.length} chars`);
     console.log(`   Detected IDs: ${caseIds.length > 0 ? caseIds.join(', ') : 'None'}`);
     
@@ -672,7 +672,7 @@ class ClipboardMonitor {
       // Add case to SCP
       const addedCaseId = await this.scp.addCase(content, { caseId: suggestedId });
       
-      console.log(`✅ Case added: ${addedCaseId}`);
+      console.log(`Case added: ${addedCaseId}`);
       
       // Mark as processed
       this.processedHashes.add(contentHash);
@@ -684,7 +684,7 @@ class ClipboardMonitor {
       }
       
     } catch (error) {
-      console.error(`❌ Failed to process clipboard content: ${error.message}`);
+      console.error(`Failed to process clipboard content: ${error.message}`);
     }
   }
 
@@ -693,7 +693,7 @@ class ClipboardMonitor {
     
     // Setup graceful shutdown
     process.on('SIGINT', () => {
-      console.log('\n🛑 Stopping clipboard monitor...');
+      console.log('\nStopping clipboard monitor...');
       this.stop();
     });
     
@@ -727,7 +727,7 @@ class ClipboardMonitor {
 
   stop() {
     this.isRunning = false;
-    console.log('📋 Clipboard monitor stopped');
+    console.log('Clipboard monitor stopped');
     process.exit(0);
   }
 }
@@ -809,7 +809,7 @@ program
           });
         });
         
-        console.log(`📋 Clipboard content retrieved (${process.platform})`);
+        console.log(`Clipboard content retrieved (${process.platform})`);
       } catch (e) {
         console.error(`Clipboard not available on ${process.platform}. Error: ${e.message}`);
         console.error('Please use --file or pipe content.');
@@ -857,10 +857,10 @@ program
     } else {
       console.log(`Found ${results.length} matching cases:\\n`);
       results.forEach(result => {
-        console.log(`📋 ${result.case_id} (score: ${result.score})`);
+        console.log(`${result.case_id} (score: ${result.score})`);
         console.log(`   ${result.summary}`);
-        console.log(`   🏷️  ${result.tags.join(', ')}`);
-        console.log(`   📍 Matches: ${result.matches.join(', ')}`);
+        console.log(`   Tags: ${result.tags.join(', ')}`);
+        console.log(`   Matches: ${result.matches.join(', ')}`);
         console.log('');
       });
     }
@@ -919,9 +919,9 @@ program
       minLength: parseInt(options.minLength)
     });
     
-    console.log('🔍 Starting clipboard monitor...');
-    console.log('📋 Copy case data to clipboard - it will be automatically processed');
-    console.log('⏸️  Press Ctrl+C to stop monitoring\n');
+    console.log('Starting clipboard monitor...');
+    console.log('Copy case data to clipboard - it will be automatically processed');
+    console.log('Press Ctrl+C to stop monitoring\n');
     
     await monitor.start();
   });

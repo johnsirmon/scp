@@ -29,27 +29,37 @@
 ## Quick Start
 
 ```bash
-# Install
-curl -sSL get.scp.dev | sh
+# Install dependencies
+npm install
 
-# Add a case
-scp add "ICM-123: Database timeout in prod"
+# Add a case from clipboard
+node scp.js add --paste
+
+# Add a case from file
+node scp.js add --file case-data.txt
 
 # Search for similar issues
-scp search "timeout"
+node scp.js search "timeout"
 
 # Export context for AI tools
-scp get ICM-123 --mode=summary
+node scp.js get ICM-123 --context
+
+# Monitor clipboard for automatic case detection
+node scp.js monitor
+
+# Run in memory-only mode (no disk persistence)
+node scp.js --memory add --paste
 ```
 
-## Security Profiles
+## Core Features
 
-| Profile | For | Data Handling | Output |
-|---------|-----|---------------|--------|
-| **strict** | Regulated/gov | Mandatory redaction | Redacted only |
-| **enterprise** | Large tech | Redact w/ JIT rehydrate | Redacted unless --full local |
-| **trusted** | Startup/lab | Redact recommended | Mixed |
-| **dev** | Personal sandbox | Optional redaction | Full |
+- **Cross-platform clipboard support** (Windows PowerShell, macOS pbpaste, Linux xclip)
+- **In-memory mode** for lightweight operation with `--memory` flag
+- **Enhanced PII detection** with dual-pass regex and contextual AI patterns
+- **Real-time clipboard monitoring** with smart case ID extraction
+- **AES-256 encrypted PII vault** with rehydration capabilities
+- **Model Context Protocol server** for VSCode integration
+- **Windows-specific patterns** (UNC paths, registry keys, Windows IDs)
 
 ## Files
 
