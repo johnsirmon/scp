@@ -30,16 +30,25 @@ Support engineers waste time:
 
 ## Solution
 
+**Policy-Adaptive Support Context Protocol**: A **tiny core executable** with modular security that adapts from "air-gapped, sign in triplicate" to "paste logs in Slack" without code forks.
+
+**Core Strategy: Thin Core, Policy-Adaptive Perimeter**
+
+Ship a 50KB dependency-lean core that does 3 things well: **ingest → tokenize/redact → search**. Everything else (vault encryption, enterprise auth, DLP APIs, vector DB, MCP plugins) is modular and lazy-loaded.
+
 A **single executable** that:
 1. **Ingests** case data from common sources (clipboard, files, APIs)
 2. **Stores** cases locally with automatic PII redaction and hashing
 3. **Searches** past cases by symptoms, errors, or keywords
 4. **Rehydrates** full data when needed without losing fidelity or specificity
 5. **Injects** relevant context into AI tools via MCP (Model Context Protocol)
+6. **Adapts** to your organization's security posture via policy profiles
 
 **SCP breaks the access paradox**: Hash and strip PII for safe storage, then rehydrate with full specificity when debugging - no permission slips required.
 
 **End the Compliance Theater**: Be compliant AND productive. Store everything safely, access everything instantly. Your customers get faster fixes, your compliance team gets better sleep, and you get to actually do your job.
+
+**Bring Your Own Paranoia**: Locked-down bank? Run in strict mode—HSM keys, outbound scrub walls, audit bus. Startup lab? Use trusted mode—local AES vault, fast paste-to-search. Same schema. Same CLI. Your paranoia level, your call.
 
 ## Key Features
 
@@ -48,36 +57,72 @@ A **single executable** that:
 - Works offline - all data stored locally
 - PII-safe by default - automatic redaction with local vault
 - Cross-platform - runs anywhere
+- **Policy-adaptive**: Same tool works across security cultures
 
 **Smart Context**
 - Pattern-based case matching
 - Auto-extract: case IDs, symptoms, error codes, solutions
 - Export context in AI-friendly formats
 - VSCode MCP integration for seamless LLM context injection
+- **Redaction Boundary Contract (RBC)**: Configurable policy enforcement
 
 **Practical Workflows**
 - Paste logs → auto-extract case data
 - Search symptoms → find similar past cases  
 - Query cases → get redacted context for AI tools
 - Solve case → store solution for future reference
+- **Profile-aware**: Automatic policy detection and configuration
 
-## Architecture (Minimal)
+## Security Profiles (Built-in Presets)
+
+| Profile | For | Data Handling | Vault | Network | Default Output | Notes |
+|---------|-----|---------------|-------|---------|----------------|-------|
+| **strict** | Regulated / finserv / gov | Mandatory redaction; deny outbound raw | AES-256 + HSM/KMS option | Default offline; explicit allowlist | Redacted only | Blocks unknown fields; audit-heavy |
+| **enterprise** | Large tech / internal prod | Redact w/ override + JIT rehydrate | Encrypted local vault, org escrow optional | Controlled egress | Redacted unless --full local | Tracks approvals; pluggable IAM |
+| **trusted** | Startup / internal lab | Redact recommended, toggleable | Local encrypted (password) | Normal | Mixed | Faster; minimal ceremony |
+| **dev** | Personal sandbox | Redaction optional / disabled | Plain or encrypted | Unrestricted | Full | Use for demo/testing only |
+
+**Usage Examples:**
+```bash
+# Enterprise default: redacted export, encrypted vault
+scp --profile=enterprise add --paste
+
+# Quick lab demo: no encryption, minimal regex PII
+scp --profile=dev add sample.log
+
+# Regulated mode with enforced outbound scrub + audit bundle
+scp --profile=strict get ICM-123 --context --evidence audit.json
+```
+
+## Architecture (Minimal + Modular)
 
 **Technology Choice: Go or TypeScript/Node.js**
 - Go: Single binary, fast, great CLI tools, cross-platform
 - TypeScript: Better VSCode integration, familiar to web devs, rich ecosystem
 
-**Core Components (3 files maximum)**
+**Core Components (Minimal Interface Surface)**
 ```
-scp.go/scp.ts          # Main executable with all logic
+scp.go/scp.ts          # Main executable with core logic (50KB)
 cases.json             # Local case database (simple JSON)
 vault.json             # Encrypted PII mappings (AES-256)
 ```
 
+**Capability Modules (Lazy-Loaded)**
+```
+ingest/*    # connectors (clipboard, file, API, ServiceNow, Jira, custom)
+pii/*       # engines (regex, ml-ner, cloud-dlp, custom pattern packs)
+vault/*     # (json+aes, sqlite+kms, s3+kms, hsm-backed)
+search/*    # (local grep, sqlite query, vector, hybrid)
+ai/*        # exporters (MCP, Copilot, Claude Workbench, REST webhook)
+policy/*    # adapters (org YAML → runtime enforcement)
+```
+
 **Data Flow**
 ```
-Input → Parse → Redact PII → Store → Search/Query → Context Export
+Input → Parse → Policy Check → Redact PII → Store → Search/Query → Export Filter → Context Export
 ```
+
+**Design Rule**: SCP never assumes why data is restricted—it just enforces a configurable Redaction Boundary Contract (RBC).
 
 ## Essential Commands
 
@@ -85,12 +130,53 @@ Input → Parse → Redact PII → Store → Search/Query → Context Export
 # Install (single command)
 curl -sSL get.scp.dev | sh   # or npm install -g scp
 
-# Basic usage
-scp add "ICM-123: Database timeout in prod"
+# Profile-aware usage
+scp --profile=enterprise add "ICM-123: Database timeout in prod"
+scp --profile=dev add sample.log
 scp search "timeout"
-scp get ICM-123 --context     # For AI tools
-scp get ICM-123 --full        # With PII restored
+
+# Export with fidelity modes
+scp get ICM-123 --mode=summary      # LLM context (redacted, pattern-preserved)
+scp get ICM-123 --mode=diagnostic   # Human triage (redacted w/ structure)
+scp get ICM-123 --mode=fingerprint  # Dedupe/match only (hashed tokens)
+scp get ICM-123 --mode=full         # Authorized debug (rehydrated)
+
+# Rehydration authority flows
+scp rehydrate ICM-123 --authority=self     # Local engineer (fastest)
+scp rehydrate ICM-123 --authority=team --request  # Team escrow (JIT workflow)
+scp rehydrate ICM-123 --authority=broker --ticket 45678  # Policy service (enterprise)
+
+# Policy testing
+scp policy-check sample.log  # Shows what would be redacted under current profile
 ```
+
+## Export Fidelity Modes
+
+| Mode | Use | PII State | Size | AI-ready? |
+|------|-----|-----------|------|----------|
+| **fingerprint** | dedupe / match only | hashed tokens only | tiny | no |
+| **summary** | LLM context | redacted, pattern-preserved snippets | small | yes |
+| **diagnostic** | human triage | redacted w/ structure | medium | yes |
+| **full** | authorized debug | rehydrated | large | no external send |
+
+## Rehydration Authority Models
+
+SCP supports 3 pluggable authority flows for accessing full (non-redacted) data:
+
+**1. Self-Authority (local engineer)**
+- Key lives in local secure store
+- Fastest access for authorized debugging
+- Suitable for trusted environments
+
+**2. Delegated (team escrow)**
+- Vault tokens rehydrated when engineer + team service both approve
+- Meets Just-In-Time (JIT) workflow requirements
+- Balances security with operational efficiency
+
+**3. Brokered (policy service)**
+- External policy engine signs one-time decrypt token
+- Logs to audit bus for compliance
+- Enterprise-grade with full audit trail
 
 ## VSCode Integration
 
@@ -154,6 +240,32 @@ scp get ICM-123 --full        # With PII restored
 - Extract action items and root cause summaries
 - Avoid copying full comment threads
 - Focus on technical resolution patterns
+
+### Policy Adapter Layer (Critical for Cross-Org Adoption)
+
+Let organizations drop in a policy file that maps classification tags → action:
+
+```yaml
+pii_policy_version: 1
+rules:
+  EMAIL:
+    redact: token
+    reversible: true
+    scope: team
+  SUBSCRIPTION_ID:
+    redact: hash
+    reversible: false
+    export: deny
+  INTERNAL_ALIAS:
+    redact: token
+    reversible: true
+    export: allow-ai-redacted
+defaults:
+  export_mode: redacted
+  audit: append_only
+```
+
+This lets a relaxed org loosen restrictions without forking code; a locked org tightens.
 
 ### PII Protection Architecture & Implementation Strategy
 
@@ -322,17 +434,26 @@ scp import-vault --from-file team_pii_map.json  # Import team mappings
 - VSCode Extension Marketplace
 - Docker image for CI/CD integration
 
+**Adoption Hooks (Make it Irresistible)**
+- **90-second bootstrap** script that detects org policy & auto-configures
+- **Policy test harness**: `scp policy-check sample.log` shows what would be redacted/exported under each profile
+- **MTTR dashboard** plug-in: Count minutes saved vs JIT delays; leadership candy
+- **Out-of-the-box connectors** for 2 common tools (ServiceNow + Jira) to prove value quickly
+
 **Community & Ecosystem**
 - Open source (MIT license)
 - Plugin architecture for custom PII patterns
 - Export/import for team sharing
 - Integration docs for common support tools (ServiceNow, Jira, etc.)
+- **Policy portability**: Same schema works across security cultures
 
 **Success Metrics**
 - Time to first successful case search < 2 minutes
 - Support engineer adoption rate 
 - Context injection accuracy in AI tools
 - PII false positive rate < 5%
+- **Policy compliance**: Cross-org schema compatibility
+- **Security audit pass rate**: 100% for strict/enterprise profiles
 
 ## Example Use Cases (Based on Real ICMs)
 
