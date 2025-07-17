@@ -70,3 +70,4 @@ htmlcov/
 *.backup
 backup_*.json
 example_export.json
+# Test Data\ntest-icm*.txt\n*.log\n*.txt

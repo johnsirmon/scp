@@ -397,10 +397,10 @@ scp import-vault --from-file team_pii_map.json  # Import team mappings
 ```json
 {
   "tokens": {
-    "[SUB_ID_1]": "12345678-1234-1234-1234-123456789abc",
+    "[SUB_ID_1]": "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx",
     "[WORKSPACE_1]": "workspace-name-prod", 
-    "[EMAIL_1]": "customer@company.com",
-    "[IP_1]": "192.168.1.100"
+    "[EMAIL_1]": "user@example.com",
+    "[IP_1]": "10.0.0.100"
   },
   "metadata": {
     "created": "2025-07-17T12:00:00Z",
