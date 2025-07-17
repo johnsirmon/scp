@@ -159,7 +159,7 @@ scp get ICM-123 --full        # With PII restored
 
 **Architecture Options (Ranked by Implementation Priority)**
 
-**1. Local PII Extraction and Redaction Only** ⭐ *RECOMMENDED FIRST*
+**1. Local PII Extraction and Redaction Only** *RECOMMENDED FIRST*
 - **Design**: All PII detection and redaction occurs locally, before any external model call (LLM, API, etc)
 - **Proof**: Log transformations and original-to-placeholder mappings with timestamps in append-only audit log
 - **Why it helps**: Proves that raw PII never left the machine
@@ -188,7 +188,7 @@ scp get ICM-123 --full        # With PII restored
 }
 ```
 
-**5. PII Mode Switch** ⭐ *REQUIRED FOR FLEXIBILITY*
+**5. PII Mode Switch** *REQUIRED FOR FLEXIBILITY*
 ```bash
 # PII protection OFF - local development/debugging
 scp --no-pii-protection add "ICM-123: john.doe@company.com timeout"
