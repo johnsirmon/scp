@@ -12,13 +12,20 @@ Support engineers waste time:
 - Manually feeding case context to LLMs/AI tools
 - Searching through scattered case histories
 
+> *"When you're responsible for solving the issue but apparently not responsible enough to see the logs without asking permission from a team of coworkers, 2 robots, and someone who left the company."*
+
+**The Access Paradox**: You need the data to fix the problem, but can't access the data because of the problem you're trying to fix.
+
 ## Solution
 
 A **single executable** that:
 1. **Ingests** case data from common sources (clipboard, files, APIs)
-2. **Stores** cases locally with automatic PII redaction
+2. **Stores** cases locally with automatic PII redaction and hashing
 3. **Searches** past cases by symptoms, errors, or keywords
-4. **Injects** relevant context into AI tools via MCP (Model Context Protocol)
+4. **Rehydrates** full data when needed without losing fidelity or specificity
+5. **Injects** relevant context into AI tools via MCP (Model Context Protocol)
+
+**SCP breaks the access paradox**: Hash and strip PII for safe storage, then rehydrate with full specificity when debugging - no permission slips required.
 
 ## Key Features
 
