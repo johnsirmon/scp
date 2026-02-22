@@ -12,7 +12,7 @@
     "build": "tsc",
     "test": "vitest run",
     "test:watch": "vitest",
-    "lint": "eslint src/ test/",
+    "lint": "tsc --noEmit && eslint eslint.config.js",
     "start": "node dist/cli.js",
     "mcp": "node dist/mcp/server.js"
   },
@@ -26,7 +26,7 @@
   "author": "Microsoft Support Engineering",
   "license": "MIT",
   "dependencies": {
-    "commander": "^11.0.0",
+    "commander": "^14.0.3",
     "crypto-js": "^4.1.1",
     "zod": "^4.3.6"
   },
