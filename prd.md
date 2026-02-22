@@ -128,13 +128,13 @@ Input → Parse → Policy Check → Redact PII → Store → Search/Query → E
 
 | Stack | When to use | Components | How it reduces context while keeping fidelity |
 |-------|-------------|------------|-----------------------------------------------|
-| **Local-first MCP** | Laptop/on-call with no outbound data | TypeScript CLI + SQLite/pgvector, small open-source embeddings (e.g., `bge-small`), local cross-encoder reranker (e.g., `bge-reranker-base` via WASM) | Embeddings + rerank keep only top 5–10 passages; structured export preserves field-level fidelity while trimming tokens |
+| **Local-first MCP** | Laptop/on-call with no outbound data | TypeScript CLI + SQLite/pgvector, small open-source embeddings (e.g., `bge-small`), local reranker (cross-encoder such as `bge-reranker-base` via WASM) | Embeddings + rerank keep only top 5–10 passages; structured export preserves field-level fidelity while trimming tokens |
 | **Summary + Fingerprint Hybrid** | Large cases with repetitive logs | Fast summarizer (DistilBART/LLM 4k context), hashed token fingerprints stored alongside summaries, MCP export merges summary + requested rehydrate fields | Summaries shrink context; fingerprints ensure exact-match recall for rare strings without sending raw PII |
 | **Managed LLM Gateway** | Enterprise wanting hosted inference | MCP server → retrieval (pgvector/Qdrant) → reranker (Bedrock Titan Rerank or Cohere) → policy-aware prompt to Bedrock/Vertex/OpenAI | Gateway enforces prompt contracts, reranker boosts precision, and retrieval limits prompt size while keeping high-signal passages |
 
 **Implementation notes**
 - Keep the **schema-first context export** (case ID, symptom, error patterns, resolution, evidence pointers). Structured keys compress token use compared to free-text history.
-- Use **chunk-size caps (400–800 tokens) + overlap the greater of 10% of the chunk size or 50 tokens** to avoid context bleed; this intentionally yields ~12% overlap on 400-token chunks and ~6% on 800-token chunks to keep small chunks coherent without over-padding larger ones.
+- Use **chunk-size caps (400–800 tokens) + overlap the greater of 10% of the chunk size or 50 tokens** to avoid context bleed; this yields ~12.5% overlap on 400-token chunks and 10% on 800-token chunks, keeping small chunks coherent without over-padding larger ones.
 - Prefer **reranking before prompting**; sending only the top passages usually cuts context by 60–80% without losing resolution hints.
 - For strict profiles, store **rehydration pointers** (token IDs, file offsets) so fidelity can be restored locally even when prompts stay redacted.
 
