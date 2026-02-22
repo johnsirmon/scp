@@ -134,7 +134,7 @@ Input → Parse → Policy Check → Redact PII → Store → Search/Query → E
 
 **Implementation notes**
 - Keep the **schema-first context export** (case ID, symptom, error patterns, resolution, evidence pointers). Structured keys compress token use compared to free-text history.
-- Use **chunk-size caps (400–800 tokens) + overlap = max(0.1 × chunk_tokens, 50)** to avoid context bleed; e.g., 50 tokens (12.5%) on 400-token chunks and 80 tokens (10%) on 800-token chunks, so overlap grows in absolute terms but shrinks as a percentage for larger chunks.
+- Use **chunk-size caps (400–800 tokens) + overlap = max(0.1 × chunk_tokens, 50)** to avoid context bleed; e.g., 50 tokens (12.5%) on 400-token chunks and 80 tokens (10%) on 800-token chunks, with the percentage tapering down to 10% for any chunk ≥500 tokens.
 - Prefer **reranking before prompting**; sending only the top passages usually cuts context by 60–80% without losing resolution hints.
 - For strict profiles, store **rehydration pointers** (token IDs, file offsets) so fidelity can be restored locally even when prompts stay redacted.
 
