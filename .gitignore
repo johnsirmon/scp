@@ -1,17 +1,19 @@
 # SCP Data and Sensitive Files
-.scp/                    # User data directory with cases and vault
-*.icm                    # ICM files
-test-icm*.txt           # Test ICM data files
-**/icm-*.txt            # Any ICM test data
-node_modules/           # npm dependencies
+.scp/
+*.icm
+test-icm*.txt
+**/icm-*.txt
+
+# Dependencies
+node_modules/
 
 # PII and Sensitive Documentation - NEVER COMMIT THESE
-PIIGuidance.md          # Contains real Microsoft PII patterns
-**/PII*.md              # Any PII-related documentation
-**/pii*.md              # Any PII-related documentation (lowercase)
-*.pii                   # Any PII data files
-claudstuff.md           # Design notes and Claude prompts - keep private
-IMPLEMENTATION_GUIDE.md # Duplicate content, consolidated into prd.md
+PIIGuidance.md
+**/PII*.md
+**/pii*.md
+*.pii
+claudstuff.md
+IMPLEMENTATION_GUIDE.md
 
 # SCP Data Directory
 # This directory contains persistent storage for the SCP system
@@ -71,3 +73,5 @@ htmlcov/
 backup_*.json
 example_export.json
 # Test Data\ntest-icm*.txt\n*.log\n*.txt
+
+coverage/

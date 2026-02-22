@@ -2,14 +2,19 @@
   "name": "scp",
   "version": "1.0.0",
   "description": "Support Context Protocol - Intelligent case triage for support engineers",
+  "type": "module",
   "main": "scp.js",
   "bin": {
-    "scp": "./scp.js"
+    "scp": "./scp.js",
+    "scp-ts": "./dist/cli.js"
   },
   "scripts": {
     "build": "tsc",
-    "start": "node scp.js",
-    "mcp": "node mcp-server.js"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "lint": "tsc --noEmit && eslint eslint.config.js",
+    "start": "node dist/cli.js",
+    "mcp": "node dist/mcp/server.js"
   },
   "keywords": [
     "support",
@@ -21,14 +26,20 @@
   "author": "Microsoft Support Engineering",
   "license": "MIT",
   "dependencies": {
-    "commander": "^11.0.0",
-    "crypto-js": "^4.1.1"
+    "commander": "^14.0.3",
+    "crypto-js": "^4.1.1",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@eslint/js": "^10.0.1",
     "@types/node": "^20.0.0",
-    "typescript": "^5.0.0"
+    "@vitest/coverage-v8": "^4.0.18",
+    "eslint": "^10.0.1",
+    "prettier": "^3.8.1",
+    "typescript": "^5.9.3",
+    "vitest": "^4.0.18"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=20.0.0"
   }
 }
