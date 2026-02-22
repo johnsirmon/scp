@@ -124,6 +124,20 @@ Input → Parse → Policy Check → Redact PII → Store → Search/Query → E
 
 **Design Rule**: SCP never assumes why data is restricted—it just enforces a configurable Redaction Boundary Contract (RBC).
 
+## AI Workflow Stack Options (Context-Efficient)
+
+| Stack | When to use | Components | How it reduces context while keeping fidelity |
+|-------|-------------|------------|-----------------------------------------------|
+| **Local-first MCP** | Laptop/on-call with no outbound data | TypeScript CLI + SQLite/pgvector, small open-source embeddings (e.g., `bge-small`), local cross-encoder reranker (e.g., `mcontriever` via WASM) | Embeddings + rerank keep only top 5–10 passages; structured export preserves field-level fidelity while trimming tokens |
+| **Summary + Fingerprint Hybrid** | Large cases with repetitive logs | Fast summarizer (DistilBART/LLM 4k context), hashed token fingerprints stored alongside summaries, MCP export merges summary + requested rehydrate fields | Summaries shrink context; fingerprints ensure exact-match recall for rare strings without sending raw PII |
+| **Managed LLM Gateway** | Enterprise wanting hosted inference | MCP server → retrieval (pgvector/Qdrant) → reranker (Bedrock Titan Rerank or Cohere) → policy-aware prompt to Bedrock/Vertex/OpenAI | Gateway enforces prompt contracts, reranker boosts precision, and retrieval limits prompt size while keeping high-signal passages |
+
+**Implementation notes**
+- Keep the **schema-first context export** (case ID, symptom, error patterns, resolution, evidence pointers). Structured keys compress token use compared to free-text history.
+- Use **chunk-size caps (400–800 tokens) + overlap 10%** to avoid context bleed while keeping error signatures intact.
+- Prefer **reranking before prompting**; sending only the top passages usually cuts context by 60–80% without losing resolution hints.
+- For strict profiles, store **rehydration pointers** (token IDs, file offsets) so fidelity can be restored locally even when prompts stay redacted.
+
 ## Essential Commands
 
 ```bash
