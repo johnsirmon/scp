@@ -173,6 +173,75 @@ program
   });
 
 program
+  .command('about')
+  .description('Show information about SCP, key features, and recommended usage')
+  .action(() => {
+    console.log(`
+SCP – Support Context Protocol
+================================
+Making tribal knowledge searchable, shareable, and AI-ready.
+
+DESCRIPTION
+-----------
+SCP is a lightweight, local-first CLI tool for support engineers. It captures
+case data, automatically strips sensitive information (PII), stores it locally
+in a searchable format, and injects relevant context into AI tools like GitHub
+Copilot and Claude — so you can find and fix problems faster.
+
+HOW IT WORKS
+------------
+  1. Ingest   – paste logs, drop a file, or monitor clipboard automatically
+  2. Redact   – PII (emails, IPs, GUIDs, Azure resource IDs, paths) is stripped
+                and stored in an encrypted local vault before anything is saved
+  3. Store    – cases are saved locally in a searchable JSON database
+  4. Search   – find similar past cases by symptom, error, or keyword in seconds
+  5. Inject   – export AI-ready context to Copilot, Claude, or any MCP tool
+
+KEY FEATURES
+------------
+  • Auto PII redaction    – emails, IPs, GUIDs, Azure resource IDs, file paths
+  • Encrypted local vault – AES-256; PII tokens never transmitted
+  • Clipboard monitoring  – auto-extracts case data as you copy
+  • Searchable case store – find past cases by error, symptom, or keyword
+  • AI context export     – clean, redacted context blob for Copilot or Claude
+  • MCP server            – VS Code integration; auto-injects case context
+  • Memory-only mode      – --memory flag for zero disk writes
+  • Cross-platform        – Windows (PowerShell), macOS (pbpaste), Linux (xclip)
+  • Security profiles     – dev | trusted | enterprise | strict
+
+SECURITY PROFILES
+-----------------
+  dev        – Local sandbox / demos. PII handling optional.
+  trusted    – Startup / internal lab. Redaction recommended, toggleable.
+  enterprise – Large org / internal prod. Redact with override + JIT rehydrate.
+  strict     – Regulated / finserv / gov. Mandatory redact, offline by default.
+
+RECOMMENDED
+-----------
+  • Default profile : trusted  (recommended for most support engineers)
+  • Use --profile=strict in regulated or government environments
+  • Use --memory when working in locked-down or air-gapped environments
+  • Run 'scp mcp' and configure VS Code for automatic context injection
+
+QUICK START
+-----------
+  scp add --paste                    # ingest clipboard content
+  scp add --file case.txt            # ingest from file
+  scp search "timeout"               # find similar past cases
+  scp get <case-id> --context        # export AI-ready context
+  scp stats                          # view database summary
+  scp mcp                            # start MCP server for VS Code
+
+  scp --profile=trusted add --paste  # explicit trusted profile (recommended)
+  scp --memory add --paste           # no disk writes
+
+MORE INFO
+---------
+  https://github.com/johnsirmon/scp
+`);
+  });
+
+program
   .command('mcp')
   .description('Start the MCP server (stdin/stdout JSON-RPC)')
   .action(async () => {
